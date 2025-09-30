@@ -33,7 +33,7 @@ with Zarr
 
     return KVStore
 
-def createZarr(kvstore_schema, data_shape, chunk_shape, tstoreDataType, zarrDataType, compressor, fillvalue):
+def createZarr(kvstore_schema, data_shape, chunk_shape, grid_shape, tstoreDataType, zarrDataType, compressor, fillvalue):
     """
     Creates a new Zarr array and writes data to it.
 
@@ -41,11 +41,22 @@ def createZarr(kvstore_schema, data_shape, chunk_shape, tstoreDataType, zarrData
     - kvstore_schema (dictionary): Schema for the file store (local or remote)
     - data_shape (tuple): The shape of the data to be stored.
     - chunk_shape (tuple): The shape of the chunks in the Zarr file.
+    - grid_shape (tuple): the shape of the grid for shards (empty will skip sharding)
     - tstoreDataType (str): The data type of the data in the Tensorstore.
     - zarrDataType (str): The data type of the data in the Zarr file.
     - compressor (dictionary): The compression to be used for the Zarr array.
     - fillvalue (numeric scalar): The fill value to be used for the Zarr array.
     """
+    if len(grid_shape)>0:
+        kvstore_schema = {
+            "driver": "zarr3_sharding_indexed",
+            "kvstore": kvstore_schema,
+            "grid_shape": grid_shape,
+            "index_codecs": [
+                {"name": "bytes", "configuration": {"endian": "little"}},
+                {"name": "crc32c"}
+                ],
+        }
     schema = {
         'driver': 'zarr',
         'kvstore': kvstore_schema,

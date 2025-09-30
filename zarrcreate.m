@@ -17,7 +17,8 @@ function zarrcreate(filepath, datasize, options)
 %     ChunkSize               - Defines chunking layout specified as an
 %                               array of integers.
 %                               Default is [], which specifies no chunking.
-% 
+%     GridSize                - Defines the sharding layout specification
+%                               Default is [], which will not use sharding.
 %     FillValue               - Defines the Fill value for numeric arrays.
 %                               Default is [], which specifies no fill
 %                               value.
@@ -83,6 +84,7 @@ arguments
     filepath {mustBeTextScalar, mustBeNonempty}
     datasize (1,:) double {mustBeFinite, mustBePositive, mustBeNonempty}
     options.ChunkSize (1,:) double {mustBeFinite, mustBePositive} = datasize
+    options.GridSize (1,:) double {mustBeFinite, mustBePositive} = []
     options.Datatype {mustBeTextScalar, mustBeNonempty} = 'double'
     options.FillValue {mustBeNumericOrLogical} = []
     options.Compression {mustBeStructOrEmpty} = []
@@ -93,21 +95,29 @@ if any(size(datasize) ~= size(options.ChunkSize))
     error("MATLAB:zarrcreate:chunkDimsMismatch",...
         "Invalid chunk size. Chunk size must have the same number of dimensions as Zarr array size.");
 end
-
-if any(options.ChunkSize > datasize)
-    error("MATLAB:zarrcreate:chunkSizeGreater",...
-        "Invalid chunk size. Each entry of ChunkSize must be less than or equal to the corresponding entry of Zarr array size.");
+# Dimensionality of the dataset and the grid size but be the same
+if any(size(datasize) ~= size(options.GridSize))
+    error("MATLAB:zarrcreate:chunkDimsMismatch",...
+        "Invalid chunk size. Grid size must have the same number of dimensions as Zarr array size.");
+end
+if ~isempty(GridSize)
+    if any(options.ChunkSize > datasize)
+        error("MATLAB:zarrcreate:chunkSizeGreater",...
+            "Invalid chunk size. Each entry of ChunkSize must be less than or equal to the corresponding entry of Zarr array size.");
+    end
 end
 if isscalar(datasize)
     datasize = [1 datasize];
     options.ChunkSize = [1 options.ChunkSize];
+    if ~isempty(options.GridSize)
+        options.GridSize = [1 options.GridSize];
+    end
 end
 
 zarrObj = Zarr(filepath);
-zarrObj.create(options.Datatype, datasize, options.ChunkSize, options.FillValue, options.Compression)
+zarrObj.create(options.Datatype, datasize, options.ChunkSize, options.GridSize, options.FillValue, options.Compression)
 
 end
-
 % Input validation for compression
 function mustBeStructOrEmpty(compression)
 if ~(isstruct(compression) || isempty(compression))
