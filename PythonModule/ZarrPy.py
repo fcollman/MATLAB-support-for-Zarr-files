@@ -33,7 +33,7 @@ with Zarr
 
     return KVStore
 
-def createZarr(kvstore_schema, data_shape, chunk_shape, grid_shape, tstoreDataType, zarrDataType, compressor, fillvalue):
+def createZarr(kvstore_schema, data_shape, chunk_shape, shard_shape, tstoreDataType, zarrDataType, compressor, fillvalue):
     """
     Creates a new Zarr array and writes data to it.
 
@@ -41,38 +41,57 @@ def createZarr(kvstore_schema, data_shape, chunk_shape, grid_shape, tstoreDataTy
     - kvstore_schema (dictionary): Schema for the file store (local or remote)
     - data_shape (tuple): The shape of the data to be stored.
     - chunk_shape (tuple): The shape of the chunks in the Zarr file.
-    - grid_shape (tuple): the shape of the grid for shards (empty will skip sharding)
+    - shard_shape (tuple): the shape of the grid for shards (empty will make 1 shard file)
     - tstoreDataType (str): The data type of the data in the Tensorstore.
     - zarrDataType (str): The data type of the data in the Zarr file.
     - compressor (dictionary): The compression to be used for the Zarr array.
     - fillvalue (numeric scalar): The fill value to be used for the Zarr array.
     """
-    if len(grid_shape)>0:
-        kvstore_schema = {
-            "driver": "zarr3_sharding_indexed",
-            "base": kvstore_schema,
-            "grid_shape": grid_shape,
-            "index_codecs": [
-                {"name": "bytes", "configuration": {"endian": "little"}},
-                {"name": "crc32c"}
-                ],
-        }
-    schema = {
-        'driver': 'zarr',
-        'kvstore': kvstore_schema,
-        'dtype': tstoreDataType,
-        'metadata': {
-            'shape': data_shape,
-            'chunks': chunk_shape,
-            'dtype':  zarrDataType,
-            'fill_value': fillvalue,
-            'compressor': compressor,
+
+    
+    
+    if len(shard_shape) == 0:
+        shard_shape = data_shape
+
+    #     kvstore_schema = {
+    #         "driver": "zarr3_sharding_indexed",
+    #         "base": kvstore_schema,
+    #         "grid_shape": grid_shape,
+    #         "index_codecs": [
+    #             {"name": "bytes", "configuration": {"endian": "little"}},
+    #             {"name": "crc32c"}
+    #             ],
+    #     }
+
+    kwargs = {}
+    kwargs["chunk_layout"] = ts.ChunkLayout(
+        read_chunk=ts.ChunkLayout.Grid(shape=chunk_shape),
+        write_chunk=ts.ChunkLayout.Grid(shape=shard_shape),
+    )
+    compression_codec = {
+        "name": "blosc",
+        "configuration": {
+            "cname": "zstd",
+            "clevel": 5,
+            "shuffle": "shuffle",
         },
-        'create': True,
-        'delete_existing': True,
     }
-    zarr_file = ts.open(schema).result()
-    return schema
+    zarr_file = ts.open(
+        spec={
+            "driver": "zarr3",
+            "kvstore": kvstore_schema
+        },
+        read=True,
+        write=True,
+        create=True,
+        delete_existing=True,
+        dtype=zarrDataType,
+        shape=data_shape,
+        codec=ts.CodecSpec({"driver": "zarr3", "codecs": [compression_codec]}),
+        **kwargs,
+    ).result()
+
+    return zarr_file.spec().to_json()
             
 def writeZarr (kvstore_schema, data):
     """
@@ -83,7 +102,7 @@ def writeZarr (kvstore_schema, data):
     - data (numpy.ndarray): The data to write to the Zarr file.
     """
     schema = {
-    'driver': 'zarr',
+    'driver': 'zarr3',
     'kvstore': kvstore_schema
     }
     zarr_file = ts.open(schema).result()
@@ -107,7 +126,7 @@ def readZarr (kvstore_schema, starts, ends, strides):
     - numpy.ndarray: The subset of the data read from the Zarr file.
     """
     zarr_file = ts.open({
-        'driver': 'zarr',
+        'driver': 'zarr3',
         'kvstore': kvstore_schema,
     }).result()
     
