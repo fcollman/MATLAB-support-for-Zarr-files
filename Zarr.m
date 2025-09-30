@@ -8,7 +8,7 @@ classdef Zarr < handle
     properties(GetAccess = public, SetAccess = protected)
         Path (1,1) string
         ChunkSize
-        GridSize
+        ShardSize
         DsetSize
         FillValue
         Datatype
@@ -360,12 +360,12 @@ classdef Zarr < handle
             data = cast(ndArrayData, obj.Datatype.MATLABType);
         end
 
-        function create(obj, dtype, data_size, chunk_size, grid_size, fillvalue, compression)
+        function create(obj, dtype, data_size, chunk_size, shard_size, fillvalue, compression)
             % Function to create the Zarr array
 
             obj.DsetSize = int64(data_size);
             obj.ChunkSize = int64(chunk_size);
-            obj.GridSize = int64(grid_size);
+            obj.ShardSize = int64(shard_size);
             obj.Datatype = ZarrDatatype.fromMATLABType(dtype);
 
             % If compression is empty, it means no compression
@@ -406,7 +406,7 @@ classdef Zarr < handle
             % do not use it for anything at the moment.
             
             obj.TensorstoreSchema = Zarr.ZarrPy.createZarr(obj.KVStoreSchema, py.numpy.array(obj.DsetSize),...
-                py.numpy.array(obj.ChunkSize),  py.numpy.array(obj.GridSize), obj.Datatype.TensorstoreType, ...
+                py.numpy.array(obj.ChunkSize),  py.numpy.array(obj.ShardSize), obj.Datatype.TensorstoreType, ...
                  obj.Datatype.ZarrType, obj.Compression, obj.FillValue);
             %py.ZarrPy.temp(py.numpy.array([1, 1]), py.numpy.array([2, 2]))
 
