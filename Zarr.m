@@ -8,6 +8,7 @@ classdef Zarr < handle
     properties(GetAccess = public, SetAccess = protected)
         Path (1,1) string
         ChunkSize
+        GridSize
         DsetSize
         FillValue
         Datatype
