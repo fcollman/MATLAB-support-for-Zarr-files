@@ -95,7 +95,7 @@ if any(size(datasize) ~= size(options.ChunkSize))
     error("MATLAB:zarrcreate:chunkDimsMismatch",...
         "Invalid chunk size. Chunk size must have the same number of dimensions as Zarr array size.");
 end
-# Dimensionality of the dataset and the grid size but be the same
+% Dimensionality of the dataset and the grid size but be the same
 if any(size(datasize) ~= size(options.GridSize))
     error("MATLAB:zarrcreate:chunkDimsMismatch",...
         "Invalid chunk size. Grid size must have the same number of dimensions as Zarr array size.");
