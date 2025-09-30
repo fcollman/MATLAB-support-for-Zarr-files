@@ -50,7 +50,7 @@ def createZarr(kvstore_schema, data_shape, chunk_shape, grid_shape, tstoreDataTy
     if len(grid_shape)>0:
         kvstore_schema = {
             "driver": "zarr3_sharding_indexed",
-            "kvstore": kvstore_schema,
+            "base": kvstore_schema,
             "grid_shape": grid_shape,
             "index_codecs": [
                 {"name": "bytes", "configuration": {"endian": "little"}},
