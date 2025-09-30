@@ -100,7 +100,7 @@ if any(size(datasize) ~= size(options.GridSize))
     error("MATLAB:zarrcreate:chunkDimsMismatch",...
         "Invalid chunk size. Grid size must have the same number of dimensions as Zarr array size.");
 end
-if ~isempty(GridSize)
+if ~isempty(options.GridSize)
     if any(options.ChunkSize > datasize)
         error("MATLAB:zarrcreate:chunkSizeGreater",...
             "Invalid chunk size. Each entry of ChunkSize must be less than or equal to the corresponding entry of Zarr array size.");
