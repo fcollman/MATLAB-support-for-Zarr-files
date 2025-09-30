@@ -53,21 +53,20 @@ def createZarr(kvstore_schema, data_shape, chunk_shape, shard_shape, tstoreDataT
     if len(shard_shape) == 0:
         shard_shape = data_shape
 
-    #     kvstore_schema = {
-    #         "driver": "zarr3_sharding_indexed",
-    #         "base": kvstore_schema,
-    #         "grid_shape": grid_shape,
-    #         "index_codecs": [
-    #             {"name": "bytes", "configuration": {"endian": "little"}},
-    #             {"name": "crc32c"}
-    #             ],
-    #     }
-
     kwargs = {}
     kwargs["chunk_layout"] = ts.ChunkLayout(
         read_chunk=ts.ChunkLayout.Grid(shape=chunk_shape),
         write_chunk=ts.ChunkLayout.Grid(shape=shard_shape),
     )
+    compression_codec = {
+        "name": "blosc",
+        "configuration": {
+            "cname": "zstd",
+            "clevel": 5,
+            "shuffle": "shuffle",
+        },
+    }
+
     zarr_file = ts.open(
         spec={
             "driver": "zarr3",
@@ -79,7 +78,7 @@ def createZarr(kvstore_schema, data_shape, chunk_shape, shard_shape, tstoreDataT
         delete_existing=True,
         dtype=zarrDataType,
         shape=data_shape,
-        codec=ts.CodecSpec({"driver": "zarr3", "codecs": [compressor]}),
+        codec=ts.CodecSpec({"driver": "zarr3", "codecs": [compression_codec]}),
         **kwargs,
     ).result()
 
